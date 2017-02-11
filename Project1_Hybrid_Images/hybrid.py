@@ -22,9 +22,45 @@ def cross_correlation_2d(img, kernel):
         Return an image of the same dimensions as the input image (same width,
         height and the number of color channels)
     '''
-    # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
-    # TODO-BLOCK-END
+    output = np.zeros(img.shape)
+    w,h = img.shape
+
+    for x in range(w):
+        for y in range(h):
+            window = get_window(img,x,y,kernel)
+            output[x][y] = calculate_new_pixel(window,kernel)
+
+
+def get_window(arr,i,j,kern):
+    '''
+    Inputs:
+        arr: image array
+        i : current row index in arr
+        j: current column index in arr
+        kern: kernel array
+
+    Output:
+        window centered at i,j with the same dimensions as k.
+    '''
+    kx,ky = k.shape
+    x1 = i - kx/2
+    x2 = i + kx/2
+    y1 = j - ky/2
+    y2 = j + ky/2
+
+    window = []
+    for a in range(x1,x2+1):
+        w = []
+        for b in range(y1,y2+1):
+            if a < 0 or b < 0 or a > im.shape[0]-1 or b > im.shape[1]-1:
+                w.append(0)
+            else:
+                w.append(im[a][b])
+        window.append(w)
+    return np.array(window)
+
+def calculate_new_pixel(w,k):
+    return np.sum(w * k)
 
 def convolve_2d(img, kernel):
     '''Use cross_correlation_2d() to carry out a 2D convolution.
@@ -39,9 +75,8 @@ def convolve_2d(img, kernel):
         Return an image of the same dimensions as the input image (same width,
         height and the number of color channels)
     '''
-    # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
-    # TODO-BLOCK-END
+    # TODO - ask if kernel here is already flipped in x and y direction. If not do it and then call cross_correlation_2d
+
 
 def gaussian_blur_kernel_2d(sigma, width, height):
     '''Return a Gaussian blur kernel of the given dimensions and with the given
@@ -113,5 +148,3 @@ def create_hybrid_image(img1, img2, sigma1, size1, high_low1, sigma2, size2,
     img2 *= 2 * mixin_ratio
     hybrid_img = (img1 + img2)
     return (hybrid_img * 255).clip(0, 255).astype(np.uint8)
-
-
