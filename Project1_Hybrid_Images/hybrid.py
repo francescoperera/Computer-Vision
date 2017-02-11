@@ -75,8 +75,10 @@ def convolve_2d(img, kernel):
         Return an image of the same dimensions as the input image (same width,
         height and the number of color channels)
     '''
-    # TODO - ask if kernel here is already flipped in x and y direction. If not do it and then call cross_correlation_2d
+    return cross_correlation_2d(img,flip_kernel(kernel))
 
+def flip_kernel(k):
+    return np.flipud(np.fliplr(k))
 
 def gaussian_blur_kernel_2d(sigma, width, height):
     '''Return a Gaussian blur kernel of the given dimensions and with the given
