@@ -65,10 +65,11 @@ class TestCrossCorrelation2D(unittest.TestCase):
 	'''
 	Tests cross-correlation of RGB image using a rectangular filter
 	'''
+
 	mean = np.ones((3,3))
 	student = hybrid.cross_correlation_2d(self.img_rgb, mean)
 	solution = cv2.filter2D(self.img_rgb, -1, mean, borderType=cv2.BORDER_CONSTANT)
-
+    
 	self.assertTrue(np.allclose(student, solution, atol=1e-08), \
 		msg="Incorrect cross-correlation of RGB image using mean filter")
 

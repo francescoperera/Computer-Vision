@@ -23,15 +23,22 @@ def cross_correlation_2d(img, kernel):
         height and the number of color channels)
     '''
     output = np.zeros(img.shape)
-    w,h = img.shape
+    # if len(img.shape) == 3:
+    #     w,h,k = img.shape
+    # else:
+    #     w,h = img.shape
+    w = img.shape[0]
+    h = img.shape[1]
 
     for x in range(w):
         for y in range(h):
             window = get_window(img,x,y,kernel)
-            output[x][y] = calculate_new_pixel(window,kernel)
+            new_pixel = calculate_new_pixel(window,kernel)
+            output[x][y] = new_pixel
+    return output
 
 
-def get_window(arr,i,j,kern):
+def get_window(im,i,j,kern):
     '''
     Inputs:
         arr: image array
@@ -42,7 +49,7 @@ def get_window(arr,i,j,kern):
     Output:
         window centered at i,j with the same dimensions as k.
     '''
-    kx,ky = k.shape
+    kx,ky = kern.shape
     x1 = i - kx/2
     x2 = i + kx/2
     y1 = j - ky/2
@@ -53,14 +60,27 @@ def get_window(arr,i,j,kern):
         w = []
         for b in range(y1,y2+1):
             if a < 0 or b < 0 or a > im.shape[0]-1 or b > im.shape[1]-1:
-                w.append(0)
+                if len(im.shape) == 3:
+                    w.append([0,0,0])
+                else:
+                    w.append(0)
             else:
                 w.append(im[a][b])
         window.append(w)
     return np.array(window)
 
 def calculate_new_pixel(w,k):
-    return np.sum(w * k)
+    new_pixel = None
+    if len(w.shape) == 3:
+        pix = [0,0,0]
+        for i in range(w.shape[0]):
+            for j in range(w.shape[1]):
+                for color in range(w.shape[2]):
+                    pix[color] += w[i][j][color] * k[i][j]
+        new_pixel = pix
+    else:
+        new_pixel = np.sum(w * k)
+    return new_pixel
 
 def convolve_2d(img, kernel):
     '''Use cross_correlation_2d() to carry out a 2D convolution.
@@ -95,9 +115,12 @@ def gaussian_blur_kernel_2d(sigma, width, height):
         Return a kernel of dimensions width x height such that convolving it
         with an image results in a Gaussian-blurred image.
     '''
-    # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
-    # TODO-BLOCK-END
+    kernel = np.zeros((width,height))
+
+
+
+def gaussian(x,y,sigma):
+    return (np.exp(-(x ** 2 + y** 2) / (2 * sigma ** 2)))/ (2 * np.pi * sigma ** 2)
 
 def low_pass(img, sigma, size):
     '''Filter the image as if its filtered with a low pass filter of the given
