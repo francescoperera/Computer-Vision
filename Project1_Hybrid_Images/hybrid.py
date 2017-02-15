@@ -119,25 +119,12 @@ def gaussian_blur_kernel_2d(sigma, width, height):
     w = (width - 1)/2.0
     h = (height - 1)/2.0
     y,x = np.ogrid[-w:w+1,-h:h+1]
-
-    # x = []
-    # for i in range(-w,w+1):
-    #     x.append([i])
-    # y = [[]]
-    # for j in range(-h,h+1):
-    #     y[0].append(j)
-    # x = np.array(x)
-    # y = np.array(y)
-
     g = gaussian(x,y,sigma,w,h)
     return g/g.sum()
-    #g = np.exp( -(x*x + y*y) / (2.*sigma*sigma) )
-    #return g/ np.sqrt(2 * np.pi)
-
 
 def gaussian(x,y,sigma,width,height):
     return (np.exp(-(x ** 2 + y** 2) / (2 * sigma ** 2)))/ (2 * np.pi * sigma ** 2)
-    #return  np.exp(-((x-width/2)**2+(y-height/2)**2)/(2.0*(sigma)**2))
+
 
 def low_pass(img, sigma, size):
     '''Filter the image as if its filtered with a low pass filter of the given
@@ -148,11 +135,8 @@ def low_pass(img, sigma, size):
         Return an image of the same dimensions as the input image (same width,
         height and the number of color channels)
     '''
-    sig = sigma * np.sqrt(2)
-    g_kernel = gaussian_blur_kernel_2d(sig,size,size)
-    ans = convolve_2d(img,g_kernel)
-    print ans
-    return ans
+    g_kernel = gaussian_blur_kernel_2d(sigma,size,size)
+    return convolve_2d(img,g_kernel)
 
 def high_pass(img, sigma, size):
     '''Filter the image as if its filtered with a high pass filter of the given
@@ -163,10 +147,8 @@ def high_pass(img, sigma, size):
         Return an image of the same dimensions as the input image (same width,
         height and the number of color channels)
     '''
-    smoothed = low_pass(img,sigma,size)
-    detail = img - smoothed
-    #print detail
-    return detail
+    lowPass = low_pass(img,sigma,size)
+    return img - lowPass
 
 def create_hybrid_image(img1, img2, sigma1, size1, high_low1, sigma2, size2,
         high_low2, mixin_ratio):
