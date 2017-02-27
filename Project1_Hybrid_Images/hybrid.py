@@ -115,7 +115,6 @@ def gaussian_blur_kernel_2d(sigma, width, height):
         Return a kernel of dimensions width x height such that convolving it
         with an image results in a Gaussian-blurred image.
     '''
-    #https://stackoverflow.com/questions/17190649/how-to-obtain-a-gaussian-filter-in-python
     w = (width - 1)/2.0
     h = (height - 1)/2.0
     y,x = np.ogrid[-w:w+1,-h:h+1]
