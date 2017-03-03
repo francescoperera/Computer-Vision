@@ -98,11 +98,69 @@ class HarrisKeypointDetector(KeypointDetector):
         # each pixel and store in 'harrisImage'.  See the project page
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO in features.py not implemented")
-        # TODO-BLOCK-END
+
+        windowSize = 5
+        offset = windowSize/2
+        sigma = 0.5
+
+        Ix = ndimage.sobel(srcImage, axis=0, mode='constant')
+        Iy = ndimage.sobel(srcImage, axis=1, mode='constant')
+
+        Ixx = Ix**2
+        Iyy = Iy**2
+        Ixy = Ix*Iy
+
+
+        for w in range(width):
+            for h in range(height):
+
+                windowIxx = self.get_windowed_2D_array(Ixx,offset,w,h)
+                windowIyy = self.get_windowed_2D_array(Iyy,offset,w,h)
+                windowIxy = self.get_windowed_2D_array(Ixy,offset,w,h)
+
+                print(windowIxx)
+                print(windowIyy)
+                print(windowIxy)
+
+                gauss_windowIxx = ndimage.gaussian_filter(windowIxx,sigma)
+                gauss_windowIyy = ndimage.gaussian_filter(windowIyy,sigma)
+                gauss_windowIxy = ndimage.gaussian_filter(windowIxy,sigma)
+
+
+                A = gauss_windowIxx.sum()
+                C = gauss_windowIyy.sum()
+                B = gauss_windowIxy.sum()
+
+                #H = [[A,B],[B,C]] = Harris Matrix
+
+                det = (A*C) - (B**2)
+                trace = A + C
+
+                cH = det - 0.1 * (trace**2)
+
+                harrisImage[w][h] = cH
 
         return harrisImage, orientationImage
+
+    def get_windowed_2D_array(self,arr,off,i,j):
+        x1 = i - off
+        x2 = i + off
+        y1 = j - off
+        y2 = j + off
+
+        window = []
+        for a in range(x1,x2+1):
+            w = []
+            for b in range(y1,y2+1):
+                if a < 0 or b < 0 or a > arr.shape[0]-1 or b > arr.shape[1]-1:
+                    w.append(0.0)
+                else:
+                    w.append(arr[a][b])
+            window.append(w)
+        return np.array(window)
+
+
+
 
     def computeLocalMaxima(self, harrisImage):
         '''
@@ -459,4 +517,3 @@ class ORBFeatureMatcher(FeatureMatcher):
 
     def matchFeatures(self, desc1, desc2):
         return self.bf.match(desc1.astype(np.uint8), desc2.astype(np.uint8))
-
