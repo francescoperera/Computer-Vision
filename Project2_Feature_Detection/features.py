@@ -5,6 +5,7 @@ import numpy as np
 import scipy
 from scipy import ndimage, spatial
 
+
 import transformations
 
 
@@ -98,68 +99,37 @@ class HarrisKeypointDetector(KeypointDetector):
         # each pixel and store in 'harrisImage'.  See the project page
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
-
-        windowSize = 5
-        offset = windowSize/2
         sigma = 0.5
 
-        Ix = ndimage.sobel(srcImage, axis=0, mode='constant')
-        Iy = ndimage.sobel(srcImage, axis=1, mode='constant')
+        Ix = ndimage.sobel(srcImage,0)
+        Iy = ndimage.sobel(srcImage,1)
+        orientationImage = np.rad2deg(np.arctan2(Iy,Ix))
+        print orientationImage.shape
+        print orientationImage[:20,:20]
 
         Ixx = Ix**2
         Iyy = Iy**2
         Ixy = Ix*Iy
 
+        gauss_Ixx = ndimage.gaussian_filter(Ixx,sigma)
+        gauss_Iyy = ndimage.gaussian_filter(Iyy,sigma)
+        gauss_Ixy = ndimage.gaussian_filter(Ixy,sigma)
 
-        for w in range(width):
-            for h in range(height):
-
-                windowIxx = self.get_windowed_2D_array(Ixx,offset,w,h)
-                windowIyy = self.get_windowed_2D_array(Iyy,offset,w,h)
-                windowIxy = self.get_windowed_2D_array(Ixy,offset,w,h)
-
-                print(windowIxx)
-                print(windowIyy)
-                print(windowIxy)
-
-                gauss_windowIxx = ndimage.gaussian_filter(windowIxx,sigma)
-                gauss_windowIyy = ndimage.gaussian_filter(windowIyy,sigma)
-                gauss_windowIxy = ndimage.gaussian_filter(windowIxy,sigma)
-
-
-                A = gauss_windowIxx.sum()
-                C = gauss_windowIyy.sum()
-                B = gauss_windowIxy.sum()
-
+        for h in range(height):
+            for w in range(width):
+                A = gauss_Ixx[h][w]
+                C = gauss_Iyy[h][w]
+                B = gauss_Ixy[h][w]
                 #H = [[A,B],[B,C]] = Harris Matrix
-
                 det = (A*C) - (B**2)
                 trace = A + C
-
                 cH = det - 0.1 * (trace**2)
 
-                harrisImage[w][h] = cH
+                harrisImage[h][w] = cH
+
+
 
         return harrisImage, orientationImage
-
-    def get_windowed_2D_array(self,arr,off,i,j):
-        x1 = i - off
-        x2 = i + off
-        y1 = j - off
-        y2 = j + off
-
-        window = []
-        for a in range(x1,x2+1):
-            w = []
-            for b in range(y1,y2+1):
-                if a < 0 or b < 0 or a > arr.shape[0]-1 or b > arr.shape[1]-1:
-                    w.append(0.0)
-                else:
-                    w.append(arr[a][b])
-            window.append(w)
-        return np.array(window)
-
-
 
 
     def computeLocalMaxima(self, harrisImage):
@@ -175,12 +145,33 @@ class HarrisKeypointDetector(KeypointDetector):
         '''
         destImage = np.zeros_like(harrisImage, np.bool)
 
-        # TODO 2: Compute the local maxima image
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO in features.py not implemented")
-        # TODO-BLOCK-END
+        height,width = harrisImage.shape[:2]
+        window_size = 7
+        offset = window_size/2
 
+        for x in range(height):
+            for y in range(width):
+                maxima = self.is_maxima(harrisImage,offset,x,y)
+                destImage[x][y]= maxima
         return destImage
+
+    def is_maxima(self,arr,off,i,j):
+        x1 = i - off
+        x2 = i + off
+        y1 = j - off
+        y2 = j + off
+
+        maxima = arr[i][j]
+        isMaxima = True
+
+        for a in range(x1,x2+1):
+            for b in range(y1,y2+1):
+                if a < 0 or b < 0 or a > arr.shape[0]-1 or b > arr.shape[1]-1:
+                    continue
+                else:
+                    if arr[a][b] > maxima:
+                        isMaxima = False
+        return  isMaxima
 
     def detectKeypoints(self, image):
         '''
