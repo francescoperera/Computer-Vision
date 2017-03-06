@@ -105,7 +105,7 @@ class HarrisKeypointDetector(KeypointDetector):
         Iy = ndimage.sobel(srcImage,1)
         orientationImage = np.rad2deg(np.arctan2(Iy,Ix))
         print orientationImage.shape
-        print orientationImage[:20,:20]
+        print orientationImage
 
         Ixx = Ix**2
         Iyy = Iy**2
