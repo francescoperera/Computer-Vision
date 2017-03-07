@@ -92,6 +92,11 @@ class HarrisKeypointDetector(KeypointDetector):
         '''
         height, width = srcImage.shape[:2]
 
+        print("Looking into NPZ file:")
+        # with np.load('resources/arrays.npz') as data:
+        #     #print data["a"].shape
+        #     print data["a"][:30,:30]
+
         harrisImage = np.zeros(srcImage.shape[:2])
         orientationImage = np.zeros(srcImage.shape[:2])
 
@@ -99,21 +104,22 @@ class HarrisKeypointDetector(KeypointDetector):
         # each pixel and store in 'harrisImage'.  See the project page
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
-        sigma = 0.5
 
-        Ix = ndimage.sobel(srcImage,0)
-        Iy = ndimage.sobel(srcImage,1)
+        Iy = ndimage.sobel(srcImage,0)
+        Ix = ndimage.sobel(srcImage,1)
         orientationImage = np.rad2deg(np.arctan2(Iy,Ix))
-        print orientationImage.shape
-        print orientationImage
 
         Ixx = Ix**2
         Iyy = Iy**2
         Ixy = Ix*Iy
 
-        gauss_Ixx = ndimage.gaussian_filter(Ixx,sigma)
-        gauss_Iyy = ndimage.gaussian_filter(Iyy,sigma)
-        gauss_Ixy = ndimage.gaussian_filter(Ixy,sigma)
+        gauss_Ixx = np.zeros(srcImage.shape[:2])
+        gauss_Iyy = np.zeros(srcImage.shape[:2])
+        gauss_Ixy = np.zeros(srcImage.shape[:2])
+
+        ndimage.gaussian_filter(Ixx,sigma = 0.5,truncate = 4.0,mode="constant",output = gauss_Ixx)
+        ndimage.gaussian_filter(Iyy,sigma = 0.5,truncate = 4.0,mode="constant",output = gauss_Iyy)
+        ndimage.gaussian_filter(Ixy,sigma = 0.5,truncate = 4.0,mode="constant",output = gauss_Ixy)
 
         for h in range(height):
             for w in range(width):
@@ -127,7 +133,17 @@ class HarrisKeypointDetector(KeypointDetector):
 
                 harrisImage[h][w] = cH
 
-
+        """
+        This prints the non zero difference between pixels of the calculated
+        Harris image and the true Harris image.
+        """
+        # with np.load('resources/arrays.npz') as data:
+        #     print("The verdict is:")
+        #     #print np.array_equal(harrisImage,data["a"])
+        #     diff = data["a"] - harrisImage
+        #     idxs = np.nonzero(diff)
+        #     for i in range(len(idxs[0])):
+        #         print diff[idxs[0][i]][idxs[1][i]]
 
         return harrisImage, orientationImage
 
