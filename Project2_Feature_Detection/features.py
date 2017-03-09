@@ -91,12 +91,6 @@ class HarrisKeypointDetector(KeypointDetector):
                                 gradient at each pixel in degrees.
         '''
         height, width = srcImage.shape[:2]
-
-        print("Looking into NPZ file:")
-        # with np.load('resources/arrays.npz') as data:
-        #     #print data["a"].shape
-        #     print data["a"][:30,:30]
-
         harrisImage = np.zeros(srcImage.shape[:2])
         orientationImage = np.zeros(srcImage.shape[:2])
 
@@ -287,18 +281,48 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
         image /= 255.
         grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         desc = np.zeros((len(keypoints), 5 * 5))
-
         for i, f in enumerate(keypoints):
             x, y = f.pt
 
             # TODO 4: The simple descriptor is a 5x5 window of intensities
             # sampled centered on the feature point. Store the descriptor
             # as a row-major vector. Treat pixels outside the image as zero.
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO in features.py not implemented")
-            # TODO-BLOCK-END
+            desc[i] = self.get_5_5_window(x,y,grayImage)
 
+        #DEBUG
+        with np.load('resources/arrays.npz') as data:
+             print("The verdict is:")
+             print data["e"].shape
+             print desc.shape
+             print "comparing rows:"
+             print data["e"][8018:8019,:]
+             print desc[8018:8019,:]
+            #  print data["e"][300:310]
+            #  print desc[300:310]
+             diff = data["e"] - desc
+             idxs = np.nonzero(diff)
+             print np.nonzero(desc)[0].shape
+             print "There are " + str(idxs[0].shape[0]) + " nonzero points"
+             for i in range(len(idxs[0])):
+                  print str(diff[idxs[0][i]][idxs[1][i]]) + ":" + str(idxs[0][i]) + "," + str(idxs[1][i])
+        #DEBUG
         return desc
+
+    def get_5_5_window(self,i,j,im):
+        x1 = int(i) - 2
+        x2 = int(i) + 2
+        y1 = int(j) - 2
+        y2 = int(j) + 2
+        #print "("+ str(x1) + "," + str(x2) + "),(" + str(y1) + "," + str(y2) + ")"
+        height,width = im.shape[:2]
+        window = []
+        for x in range(x1,x2+1):
+            for y in range(y1,y2+1):
+                if x < 0 or y < 0 or x > height-1 or y > width-1:
+                    window.append(0.0)
+                else:
+                    window.append(im[x][y])
+        return np.array(window)
 
 
 class MOPSFeatureDescriptor(FeatureDescriptor):
@@ -463,6 +487,16 @@ class SSDFeatureMatcher(FeatureMatcher):
         if desc1.shape[0] == 0 or desc2.shape[0] == 0:
             return []
 
+        for queryIdx in range(desc1.shape[0]):
+            lowestDist = None
+            bestFeature = None
+            for trainIdx in range(desc2.shape[0]):
+                distance = spatial.distance.cdist(desc1[queryIdx],desc2[trainIdx],'euclidean')
+                if lowestDist == None or distance < lowestDist:
+                    lowestDist = distance
+                    bestFeature = desc2[trainIdx]
+            matches.append(bestFeature)
+            
         # TODO 7: Perform simple feature matching.  This uses the SSD
         # distance between two feature vectors, and matches a feature in
         # the first image with the closest feature in the second image.
