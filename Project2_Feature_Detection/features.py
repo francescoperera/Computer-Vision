@@ -225,10 +225,11 @@ class HarrisKeypointDetector(KeypointDetector):
                 # data here. Set f.size to 10, f.pt to the (x,y) coordinate,
                 # f.angle to the orientation in degrees and f.response to
                 # the Harris score
-                # TODO-BLOCK-BEGIN
-                raise Exception("TODO in features.py not implemented")
-                # TODO-BLOCK-END
-
+                f.size = 10
+                f.pt = (x, y)
+                f.angle = orientationImage[y,x]
+                f.response = harrisImage[y,x]
+                
                 features.append(f)
 
         return features
@@ -288,24 +289,6 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
             # sampled centered on the feature point. Store the descriptor
             # as a row-major vector. Treat pixels outside the image as zero.
             desc[i] = self.get_5_5_window(x,y,grayImage)
-
-        #DEBUG
-        with np.load('resources/arrays.npz') as data:
-             print("The verdict is:")
-             print data["e"].shape
-             print desc.shape
-             print "comparing rows:"
-             print data["e"][8018:8019,:]
-             print desc[8018:8019,:]
-            #  print data["e"][300:310]
-            #  print desc[300:310]
-             diff = data["e"] - desc
-             idxs = np.nonzero(diff)
-             print np.nonzero(desc)[0].shape
-             print "There are " + str(idxs[0].shape[0]) + " nonzero points"
-             for i in range(len(idxs[0])):
-                  print str(diff[idxs[0][i]][idxs[1][i]]) + ":" + str(idxs[0][i]) + "," + str(idxs[1][i])
-        #DEBUG
         return desc
 
     def get_5_5_window(self,i,j,im):
@@ -313,7 +296,7 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
         x2 = int(i) + 2
         y1 = int(j) - 2
         y2 = int(j) + 2
-    
+
         height,width = im.shape[:2]
         window = []
         for y in range(y1,y2+1):
