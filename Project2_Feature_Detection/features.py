@@ -313,15 +313,15 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
         x2 = int(i) + 2
         y1 = int(j) - 2
         y2 = int(j) + 2
-        #print "("+ str(x1) + "," + str(x2) + "),(" + str(y1) + "," + str(y2) + ")"
+    
         height,width = im.shape[:2]
         window = []
-        for x in range(x1,x2+1):
-            for y in range(y1,y2+1):
+        for y in range(y1,y2+1):
+            for x in range(x1,x2+1):
                 if x < 0 or y < 0 or x > height-1 or y > width-1:
                     window.append(0.0)
                 else:
-                    window.append(im[x][y])
+                    window.append(im[y][x])
         return np.array(window)
 
 
@@ -496,7 +496,7 @@ class SSDFeatureMatcher(FeatureMatcher):
                     lowestDist = distance
                     bestFeature = desc2[trainIdx]
             matches.append(bestFeature)
-            
+
         # TODO 7: Perform simple feature matching.  This uses the SSD
         # distance between two feature vectors, and matches a feature in
         # the first image with the closest feature in the second image.
