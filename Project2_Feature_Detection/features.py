@@ -226,10 +226,10 @@ class HarrisKeypointDetector(KeypointDetector):
                 # f.angle to the orientation in degrees and f.response to
                 # the Harris score
                 f.size = 10
-                f.pt = (x, y)
+                f.pt = (x,y)
                 f.angle = orientationImage[y,x]
                 f.response = harrisImage[y,x]
-                
+
                 features.append(f)
 
         return features
@@ -335,10 +335,19 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # from each pixel in the 40x40 rotated window surrounding
             # the feature to the appropriate pixels in the 8x8 feature
             # descriptor image.
-            transMx = np.zeros((2, 3))
+            # transMx = np.zeros((2, 3))
 
             # TODO-BLOCK-BEGIN
-            raise Exception("TODO in features.py not implemented")
+            # i think one of these matrices is wrong
+            sf = .2 #scale by 1/5
+            T2 = transformations.get_trans_mx(np.array([(0.5 * windowSize), (0.5 * windowSize),0]))
+            S = transformations.get_scale_mx(sf,sf,1)
+            R = transformations.get_rot_mx(0,0,-np.radians(f.angle))
+            T1 = transformations.get_trans_mx(np.array([-f.pt[0], -f.pt[1], 0]))
+            #T2 * S * R * T1
+            transMx = np.dot(T2, np.dot(S,np.dot(R, T1)))
+            # transMx = np.dot(np.dot(np.dot(T2,S),R), T1)
+            transMx = self.concatenate_matrix(transMx)
             # TODO-BLOCK-END
 
             # Call the warp affine function to do the mapping
@@ -350,10 +359,17 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # variance. If the variance is zero then set the descriptor
             # vector to zero. Lastly, write the vector to desc.
             # TODO-BLOCK-BEGIN
-            raise Exception("TODO in features.py not implemented")
-            # TODO-BLOCK-END
-
+            stdev=destImage.std()
+            normalized = destImage-destImage.mean()
+            if stdev > 1e-5:
+                normalized = normalized/stdev
+            else:
+                normalized=np.zeros([8,8])
+            desc[i] = normalized.flatten()
         return desc
+
+    def concatenate_matrix(self, M):
+        return np.delete(M,2, axis=1)[:2]
 
 
 class ORBFeatureDescriptor(KeypointDetector):
@@ -460,6 +476,7 @@ class SSDFeatureMatcher(FeatureMatcher):
                     distance: The distance between the two features
         '''
         matches = []
+
         # feature count = n
         assert desc1.ndim == 2
         # feature count = m
@@ -470,25 +487,20 @@ class SSDFeatureMatcher(FeatureMatcher):
         if desc1.shape[0] == 0 or desc2.shape[0] == 0:
             return []
 
-        for queryIdx in range(desc1.shape[0]):
-            lowestDist = None
-            bestFeature = None
-            for trainIdx in range(desc2.shape[0]):
-                distance = spatial.distance.cdist(desc1[queryIdx],desc2[trainIdx],'euclidean')
-                if lowestDist == None or distance < lowestDist:
-                    lowestDist = distance
-                    bestFeature = desc2[trainIdx]
-            matches.append(bestFeature)
+        distances = scipy.spatial.distance.cdist(desc1,desc2,'euclidean')
+        for i,row in enumerate(distances):
+            trainIdx = i
+            queryIdx = np.argmin(row)
+            dist = row[queryIdx]
+            matchObject = cv2.DMatch(trainIdx,queryIdx,dist)
+            matches.append(matchObject)
 
         # TODO 7: Perform simple feature matching.  This uses the SSD
         # distance between two feature vectors, and matches a feature in
         # the first image with the closest feature in the second image.
         # Note: multiple features from the first image may match the same
         # feature in the second image.
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO in features.py not implemented")
-        # TODO-BLOCK-END
-
+        print "MATCH 0 in FEATURES: ",matches[0].queryIdx,matches[0].trainIdx,matches[0].distance
         return matches
 
 
@@ -519,6 +531,15 @@ class RatioFeatureMatcher(FeatureMatcher):
 
         if desc1.shape[0] == 0 or desc2.shape[0] == 0:
             return []
+        distances = scipy.spatial.distance.cdist(desc1,desc2,'euclidean')
+        for i,row in enumerate(distances):
+            trainIdx = i
+            rowIdx = np.argsort(row)
+            first = rowIdx[0]
+            second = rowIdx[1]
+            ratio = row[first]/float(row[second])
+            matchObject = cv2.DMatch(trainIdx,first,ratio)
+            matches.append(matchObject)
 
         # TODO 8: Perform ratio feature matching.
         # This uses the ratio of the SSD distance of the two best matches
@@ -527,9 +548,7 @@ class RatioFeatureMatcher(FeatureMatcher):
         # Note: multiple features from the first image may match the same
         # feature in the second image.
         # You don't need to threshold matches in this function
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO in features.py not implemented")
-        # TODO-BLOCK-END
+
 
         return matches
 

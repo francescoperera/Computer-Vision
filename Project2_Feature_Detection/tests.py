@@ -33,13 +33,36 @@ def compare_cv2_points(pnt1, pnt2):
     if not np.isclose(pnt1.response,pnt2.response,rtol=1e-3,atol=1e-5): return False
     return True
 
+def compare_bf_matcher(m1, m2):
+    """
+        test for TODO 7
+    """
+    print type(m1), type(m2)
+    print m1.queryIdx,m1.trainIdx,m1.distance
+    print m1.queryIdx,m1.trainIdx,m1.distance
+    trainIdx1, trainIdx2 = [], []
+    queryIdx1, queryIdx2 = [], []
+    distance1, distance2 = [], []
+    for i, match in enumerate(m1):
+        match2 = m2[i]
+        trainIdx1.append(match.trainIdx)
+        trainIdx2.append(match2.trainIdx)
+        queryIdx1.append(match.queryIdx)
+        queryIdx2.append(match2.queryIdx)
+        distance1.append(match.distance)
+        distance2.append(match2.distance)
+    bool_sum = np.allclose(np.array(trainIdx1),np.array(trainIdx2),rtol=1e-3,atol=1e-5) +\
+               np.allclose(np.array(queryIdx1),np.array(queryIdx2),rtol=1e-3,atol=1e-5) +\
+               np.allclose(np.array(trainIdx1),np.array(trainIdx2),rtol=1e-3,atol=1e-5)
+    return bool_sum == 3
+
 # Testing function
 def try_this(todo, run, truth, compare, *args, **kargs):
     '''
     Run a function, test the output with compare, and print and error if it doesn't work
     @arg todo (int or str): The Todo number
     @arg run (func): The function to run
-    @arg truth (any): The correct output of the function 
+    @arg truth (any): The correct output of the function
     @arg compare (func->bool): Compares the output of the `run` function to truth and provides a boolean if correct
     @arg *args (any): Any arguments that should be passed to `run`
     @arg **kargs (any): Any kargs that should be passed to compare
@@ -50,6 +73,7 @@ def try_this(todo, run, truth, compare, *args, **kargs):
     failed = 0
     try:
         output = run(*args)
+        print "HOLLA:", type(output)
     except Exception as e:
         traceback.print_exc()
         print("TODO {} threw an exception, see exception above".format(todo))
@@ -79,6 +103,7 @@ def compute_and_save():
     e = SFD.describeFeatures(image, d) # Todo 4
     f = MFD.describeFeatures(image, d) # Todo 5,6
     # No test for Todo 7 or 8
+    g = SSDFM.matchFeatures(e,e)
     d_proc = pickle_cv2(d)
     np.savez('resources/arrays',a=a,b=b,c=c,d_proc=d_proc,e=e,f=f)
 # Uncomment next line to overwrite test data (not recommended)
@@ -99,10 +124,16 @@ pay attention to the tolerances used by this testing script. It is
 possible that your answer is correct but it barely falls outside the
 tolerance range.
 
-This is not the script used by the autograder. 
+This is not the script used by the autograder.
 '''
 loaded = np.load('resources/arrays.npz')
 d = unpickle_cv2(loaded['d_proc'])
+bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+testDesc1, testDesc2 = loaded['e'].copy()[:3], loaded['e'].copy()[:3]
+testDesc1.dtype, testDesc2.dtype = np.uint8, np.uint8
+matches = bf.match(testDesc1, testDesc2)
+print "MATCH 0: ",matches[0].queryIdx,matches[0].trainIdx,matches[0].distance
+
 
 try_this(1, HKD.computeHarrisValues, [loaded['a'],loaded['b']], compare_array, grayImage)
 
@@ -126,3 +157,4 @@ try_this(4, SFD.describeFeatures, loaded['e'], compare_array, image, d)
 
 try_this('5 and/or 6', MFD.describeFeatures, loaded['f'], compare_array, image, d)
 
+try_this('7',SSDFM.matchFeatures,  matches, compare_bf_matcher, testDesc1, testDesc2)
