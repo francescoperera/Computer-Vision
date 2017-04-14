@@ -43,6 +43,17 @@ def computeSphericalWarpMappings(dstShape, f, k1, k2):
                     The dimensions are (rows, cols, addresses of pixels
                     [:,:,0] are x (i.e., cols) and [:,:,1] are y (i.e., rows)).
     '''
+    def getCenterPositionForMatrix(m):
+        '''
+        Input:
+            m --  2D numpy.ndarray
+        Output:
+            xc - center coordinate on the
+        '''
+        xsize,ysize = m.shape[:2]
+        xci = xsize / 2
+        yci = ysize / 2
+        return  xci,yci
 
     # calculate minimum y value
     vec = np.zeros(3)
@@ -62,6 +73,7 @@ def computeSphericalWarpMappings(dstShape, f, k1, k2):
 
     xf = ((xf - 0.5 * dstShape[1]) / f)
     yf = ((yf - 0.5 * dstShape[0]) / f - min_y)
+
     # BEGIN TODO 1
     # add code to apply the spherical correction, i.e.,
     # compute the Euclidean coordinates,
@@ -70,13 +82,21 @@ def computeSphericalWarpMappings(dstShape, f, k1, k2):
     # Use xf, yf as input for your code block and compute xt, yt
     # as output for your code. They should all have the shape
     # (img_height, img_width)
-    # TODO-BLOCK-BEGIN
-    raise Exception("TODO in warp.py not implemented")
-    # TODO-BLOCK-END
-    # END TODO
+
+    #x,y are the homogenous coordinates
+    z = np.cos(xf) * np.cos(yf) #cos(theta) * cos(phi)
+    x = (np.sin(xf) * np.cos(yf)) / z  # x = sin(theta) * cos(phi)
+    y = np.sin(yf) / z # y = sin(phi)
+
+    #apply radial distortion
+    r2 = x**2 + y**2 #np.array
+    xt = x * (1 + k1*r2 + k2*(r2)**2) #np.array
+    yt = y * (1 + k1*r2 + k2*(r2)**2) #np.array
+
     # Convert back to regular pixel coordinates
     xn = 0.5 * dstShape[1] + xt * f
     yn = 0.5 * dstShape[0] + yt * f
+
     uvImg = np.dstack((xn,yn))
     return uvImg
 
@@ -103,5 +123,3 @@ def warpSpherical(image, focalLength, k1=-0.21, k2=0.26):
 
     # warp image based on backwards coordinates
     return warpLocal(image, uv)
-
-

@@ -31,6 +31,7 @@ def computeHomography(f1, f2, matches, A_out=None):
     num_rows = 2 * num_matches
     num_cols = 9
     A_matrix_shape = (num_rows,num_cols)
+    print(A_matrix_shape)
     A = np.zeros(A_matrix_shape)
 
     for i in range(len(matches)):
@@ -59,12 +60,12 @@ def computeHomography(f1, f2, matches, A_out=None):
     #Homography to be calculated
     H = np.eye(3)
 
-    #BEGIN TODO 3
-    #Fill the homography H with the appropriate elements of the SVD
-    #TODO-BLOCK-BEGIN
-    raise Exception("TODO in alignment.py not implemented")
-    #TODO-BLOCK-END
-    #END TODO
+    #TODO 3
+    last_col_idx = Vt.shape[1] - 1
+    h = Vt[:,last_col_idx] # h = vector of 9 x 1 entries of H
+    print(h.shape)
+    H = np.reshape(h,H.shape)
+
 
     return H
 
@@ -206,4 +207,3 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
         raise Exception("Error: Invalid motion model.")
 
     return M
-
