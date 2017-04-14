@@ -39,13 +39,32 @@ def computeHomography(f1, f2, matches, A_out=None):
         (a_x, a_y) = f1[m.queryIdx].pt
         (b_x, b_y) = f2[m.trainIdx].pt
 
-        #BEGIN TODO 2
+        #TODO 2
         #Fill in the matrix A in this loop.
         #Access elements using square brackets. e.g. A[0,0]
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
-        #TODO-BLOCK-END
-        #END TODO
+        x1 = 2 * i
+        x2 = 2 * i + 1
+        A[x1][0] = a_x
+        A[x1][1] = a_y
+        A[x1][2] = 1
+        A[x1][3] = 0
+        A[x1][4] = 0
+        A[x1][5] = 0
+        A[x1][6] = -(b_x * a_x)
+        A[x1][7] = -(b_x * a_y)
+        A[x1][8] = -b_x
+        #n1 = [a_x,a_y,1,0,0,0,-(b_x * a_x),-(b_x * a_y),-b_x]
+        #n2 = [0,0,0,a_x,a_y,1,-(b_y * a_x),-(b_y * a_y),-b_y]
+        A[x2][0] = 0
+        A[x2][1] = 0
+        A[x2][2] = 0
+        A[x2][3] = a_x
+        A[x2][4] = b_x
+        A[x2][5] = 1
+        A[x2][6] = -(b_y * a_x)
+        A[x2][7] = -(b_y * a_y)
+        A[x2][8] = -b_y
+
 
     U, s, Vt = np.linalg.svd(A)
 
@@ -99,7 +118,12 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
     #full homographies (m == eHomography).  However, you should
     #only have one outer loop to perform the RANSAC code, as
     #the use of RANSAC is almost identical for both cases.
+    if m == eTranslation:
+        random_matches_idxs_list = [random.randint(0,len(matches)-1)]
+    else:
+        random_matches_idxs_list = random.sample(xrange(0,len(matches-1)),4)
 
+    M,mask = cv2.findHomography(f1, f2,cv2.RANSAC,RANSACthresh)
     #Your homography handling code should call compute_homography.
     #This function should also call get_inliers and, at the end,
     #least_squares_fit.
