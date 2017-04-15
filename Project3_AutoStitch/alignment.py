@@ -42,28 +42,26 @@ def computeHomography(f1, f2, matches, A_out=None):
         #TODO 2
         #Fill in the matrix A in this loop.
         #Access elements using square brackets. e.g. A[0,0]
-        x1 = 2 * i
-        x2 = 2 * i + 1
-        A[x1][0] = a_x
-        A[x1][1] = a_y
-        A[x1][2] = 1
-        A[x1][3] = 0
-        A[x1][4] = 0
-        A[x1][5] = 0
-        A[x1][6] = -(b_x * a_x)
-        A[x1][7] = -(b_x * a_y)
-        A[x1][8] = -b_x
-        #n1 = [a_x,a_y,1,0,0,0,-(b_x * a_x),-(b_x * a_y),-b_x]
-        #n2 = [0,0,0,a_x,a_y,1,-(b_y * a_x),-(b_y * a_y),-b_y]
-        A[x2][0] = 0
-        A[x2][1] = 0
-        A[x2][2] = 0
-        A[x2][3] = a_x
-        A[x2][4] = b_x
-        A[x2][5] = 1
-        A[x2][6] = -(b_y * a_x)
-        A[x2][7] = -(b_y * a_y)
-        A[x2][8] = -b_y
+        r1, r2 = 2 * i, 2 * i + 1
+        A[r1][0] = a_x
+        A[r1][1] = a_y
+        A[r1][2] = 1
+        A[r1][3] = 0
+        A[r1][4] = 0
+        A[r1][5] = 0
+        A[r1][6] = -1.0 * b_x * a_x
+        A[r1][7] = -1.0 * b_x * a_y
+        A[r1][8] = -1.0 * b_x
+
+        A[r2][0] = 0
+        A[r2][1] = 0
+        A[r2][2] = 0
+        A[r2][3] = a_x
+        A[r2][4] = a_y
+        A[r2][5] = 1
+        A[r2][6] = -1.0 * b_y * a_x
+        A[r2][7] = -1.0 * b_y * a_y
+        A[r2][8] = -1.0 * b_y
 
 
     U, s, Vt = np.linalg.svd(A)
@@ -80,11 +78,9 @@ def computeHomography(f1, f2, matches, A_out=None):
     H = np.eye(3)
 
     #TODO 3
-    last_col_idx = Vt.shape[1] - 1
-    h = Vt[:,last_col_idx] # h = vector of 9 x 1 entries of H
-    print(h.shape)
-    H = np.reshape(h,H.shape)
-
+    idx = Vt.shape[1] - 1  # smallest singular value of A is the last column of vt
+    h = Vt[:, idx]  # h = vector of 9 x 1 entries of H
+    H = np.reshape(h, H.shape)
 
     return H
 
@@ -118,19 +114,36 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
     #full homographies (m == eHomography).  However, you should
     #only have one outer loop to perform the RANSAC code, as
     #the use of RANSAC is almost identical for both cases.
-    if m == eTranslation:
-        random_matches_idxs_list = [random.randint(0,len(matches)-1)]
+    if m == eTranslate:
+        n_samples = 1
+    elif m == eHomography:
+        n_samples = 4
     else:
-        random_matches_idxs_list = random.sample(xrange(0,len(matches-1)),4)
+        raise Exception("Error: Invalid motion model.")
 
-    M,mask = cv2.findHomography(f1, f2,cv2.RANSAC,RANSACthresh)
-    #Your homography handling code should call compute_homography.
-    #This function should also call get_inliers and, at the end,
-    #least_squares_fit.
-    #TODO-BLOCK-BEGIN
-    raise Exception("TODO in alignment.py not implemented")
-    #TODO-BLOCK-END
-    #END TODO
+    max_inliers = []
+    for i in range(nRANSAC):
+        # get random sample from matches
+        sample_idx = np.random.randint(0, len(matches), size=n_samples)
+        sample_matches = [matches[s] for s in sample_idx]
+
+        if m == eHomography:
+            H = computeHomography(f1, f2, sample_matches)
+
+        elif m == eTranslate:
+            # Calculate translation matrix
+            # f2- f1 ?
+            match = sample_matches[0]
+            f1_pt, f2_pt = f1[match.queryIdx].pt, f2[match.trainIdx].pt
+            t_x, t_y = f2_pt[0] - f1_pt[0], f2_pt[1] - f1_pt[1]
+            H = np.array([[1, 0, t_x], [0, 1, t_y], [0, 0, 1]])
+
+        curr_inliers = getInliers(f1, f2, matches, H, RANSACthresh)
+        if len(curr_inliers) > len(max_inliers):
+            max_inliers = curr_inliers
+    # Compute least squares using inliers and return as a transfrmtn mtrx
+
+    M = leastSquaresFit(f1, f2, matches, m, max_inliers)
     return M
 
 def getInliers(f1, f2, matches, M, RANSACthresh):
@@ -159,13 +172,17 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
 
     for i in range(len(matches)):
         #BEGIN TODO 5
-        #Determine if the ith matched feature f1[id1], when transformed
-        #by M, is within RANSACthresh of its match in f2.
-        #If so, append i to inliers
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
-        #TODO-BLOCK-END
-        #END TODO
+        curr_f1 = f1[matches[i].queryIdx].pt
+        curr_f1_hom = np.array([x for x in curr_f1] + [1])
+        curr_f2 = np.array(f2[matches[i].trainIdx].pt)
+
+        # Convert homogeneous back to image coordinates
+        xform_f1 = np.dot(M, curr_f1_hom)
+        xform_f1 = np.array([xform_f1[0] / xform_f1[2], xform_f1[1] / xform_f1[2]])
+
+        euc_dist = np.linalg.norm(xform_f1 - curr_f2)
+        if euc_dist <= RANSACthresh:
+            inlier_indices.append(i)
 
     return inlier_indices
 
@@ -205,11 +222,14 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
 
         for i in range(len(inlier_indices)):
             #BEGIN TODO 6
-            #Use this loop to compute the average translation vector
-            #over all inliers.
-            #TODO-BLOCK-BEGIN
-            raise Exception("TODO in alignment.py not implemented")
-            #TODO-BLOCK-END
+            curr_f1 = f1[matches[i].queryIdx].pt
+            curr_f2 = f2[matches[i].trainIdx].pt
+
+            # compute running sum
+            u += curr_f1[0] + curr_f2[0]
+            v += curr_f1[1] + curr_f2[1]
+            # TODO-BLOCK-END
+            # END TODO
             #END TODO
 
         u /= len(inlier_indices)
@@ -222,9 +242,10 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
         #BEGIN TODO 7
         #Compute a homography M using all inliers.
         #This should call computeHomography.
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
-        #TODO-BLOCK-END
+         if len(inlier_indices) > 0:
+            M = computeHomography(f1, f2, [matches[i] for i in inlier_indices])
+        else:
+            raise Exception("Error: didn't detect inliers")
         #END TODO
 
     else:
