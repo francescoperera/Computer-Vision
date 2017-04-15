@@ -28,9 +28,17 @@ def imageBoundingBox(img, M):
          minY: int for the maximum Y value of a corner
     """
     #TODO 8
-    #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
-    #TODO-BLOCK-END
+    newImage = img * M
+    minX_idx = 0
+    minY_idx = 0
+    maxX_idx = newImage.shape[0]-1
+    maxY_idx = newImage.shape[1]-1
+
+    minX = newImage[minX_idx]
+    minY = newImage[minY_idx]
+    maxX_idx = newImage[maxX_idx]
+    maxY_idx = newImage[maxY_idx]
+
     return int(minX), int(minY), int(maxX), int(maxY)
 
 
@@ -89,10 +97,11 @@ def getAccSize(ipv):
             width = w
 
         # BEGIN TODO 9
-        # add some code here to update minX, ..., maxY
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in blend.py not implemented")
-        #TODO-BLOCK-END
+        local_minX,local_minY,local_maxX,local_maxY = imageBoundingBox(img,M)
+        minX = min(local_minX,minX)
+        minY = min(local_minY,minY)
+        maxX = max(local_maxX,maxX)
+        maxY = max(local_maxY,maxY)
         # END TODO
 
     # Create an accumulator image
@@ -196,4 +205,3 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     )
 
     return croppedImage
-
