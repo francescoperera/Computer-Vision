@@ -70,8 +70,6 @@ class AutostitchBaseFrame(uiutils.BaseFrame):
         self.grid_rowconfigure(nrows - 2, weight=1)
 
     def setImage(self, cvImage):
-        print(type(cvImage))
-        print(cvImage.dtype)
         if cvImage is not None:
             self.imageCanvas.draw_cv_image(cvImage)
 

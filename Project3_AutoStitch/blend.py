@@ -28,34 +28,32 @@ def imageBoundingBox(img, M):
          minY: int for the maximum Y value of a corner
     """
     #TODO 8
-    c1 = np.array([0,0,1]) #corner 1
-    c2 = np.array([img.shape[0]-1,0,1]) #corner 2
-    c3 = np.array([0,img.shape[1]-1,1]) #corner 3
-    c4 = np.array([img.shape[0]-1 ,img.shape[1]-1,1]) #corner 4
+    c1 = np.array([0.0, 0.0, 1], dtype=float) # corner 1
+    c2 = np.array([img.shape[1], 0, 1], dtype=float)  # corner 2
+    c3 = np.array([0.0, img.shape[0], 1], dtype=float)  # corner 3
+    c4 = np.array([img.shape[1], img.shape[0], 1], dtype=float)  # corner 4
 
-    c1_tr = np.dot(M,c1)#np.array of transformed c1 coordinates
-    c1_tr_hm = np.array([c1_tr[0] / float(c1_tr[2]), c1_tr[1] / float(c1_tr[2])])
-    c2_tr = np.dot(M,c2)
-    c2_tr_hm = np.array([c2_tr[0] / float(c2_tr[2]), c2_tr[1] / float(c2_tr[2])])
-    c3_tr = np.dot(M,c3)
-    c3_tr_hm = np.array([c3_tr[0] / float(c3_tr[2]),c3_tr[1] / float(c3_tr[2])])
-    c4_tr = np.dot(M,c4)
-    c4_tr_hm = np.array([c4_tr[0] / float(c4_tr[2]),c4_tr[1] / float(c4_tr[2])])
-    c_tr_list = [c1_tr_hm,c2_tr_hm,c3_tr_hm,c4_tr_hm] #c_tr_list = list transformed coords.
-    x_c_tr = [c[0] for c in c_tr_list] #x_c_tr = list all x coords in c_tr_list
-    y_c_tr = [c[1] for c in c_tr_list] #y_c_tr = list all y coords in c_tr_list
+    c1_tr = np.dot(M, c1.T)  # np.array of transformed c1 coordinates
+    c1_tr_hm = np.array([c1_tr[0] / c1_tr[2], c1_tr[1] / c1_tr[2]])
 
-    # print
-    # print "LIST"
-    # print x_c_tr
-    # print y_c_tr
-    # print "LIST"
+    c2_tr = np.dot(M,c2.T)
+    c2_tr_hm = np.array([c2_tr[0] / c2_tr[2], c2_tr[1] / c2_tr[2]])
 
+    c3_tr = np.dot(M,c3.T)
+    c3_tr_hm = np.array([c3_tr[0] / c3_tr[2],c3_tr[1] / c3_tr[2]])
 
-    minX = min(x_c_tr)
-    minY = min(y_c_tr)
-    maxX = max(x_c_tr)
-    maxY = max(y_c_tr)
+    c4_tr = np.dot(M,c4.T)
+    c4_tr_hm = np.array([c4_tr[0] / c4_tr[2], c4_tr[1] / c4_tr[2]])
+
+    c_tr_list = [c1_tr_hm, c2_tr_hm, c3_tr_hm, c4_tr_hm] #c_tr_list = list transformed coords.
+
+    x_c_tr = sorted([c[0] for c in c_tr_list]) #x_c_tr = list all x coords in c_tr_list
+    y_c_tr = sorted([c[1] for c in c_tr_list]) #y_c_tr = list all y coords in c_tr_list
+
+    minX = x_c_tr[1]
+    minY = y_c_tr[1]
+    maxX = x_c_tr[2]
+    maxY = y_c_tr[2]
 
     return int(minX), int(minY), int(maxX), int(maxY)
 
@@ -72,119 +70,89 @@ def accumulateBlend(img, acc, M, blendWidth):
          three channels of acc record the weighted sum of the pixel colors
          and the fourth channel of acc records a sum of the weights
     """
-    print acc.shape
-    print img.shape
-    print acc[0][0][0]
-    print img[0][0][0]
     # BEGIN TODO 10
-    minX,minY,maxX,maxY = imageBoundingBox(img,M)
+    minX, minY, maxX, maxY = imageBoundingBox(img,M)
+
+
     img_width = img.shape[1]
     img_height = img.shape[0]
     M_inv = np.linalg.inv(M)
-    for x in range(minX,maxX):
-        for y in range(minY,maxY):
 
-            # check that the coords x,y are within the src ( acc)
-            if (x < 0 or x >= acc.shape[0] or y < 0 or y >= acc.shape[1]):
-                continue
+    # Pad image so that we don't run into out of bounds errors
+    img_pad = np.zeros((img_height + 2, img_width + 2, 3))
+    img_pad[1: -1, 1:-1] = img
+    img_pad[1: -1, 0] = img[:, 1]
+    img_pad[1: -1, -1] = img[:, -2]
+    img_pad[0, 1: -1] = img[1, :]
+    img_pad[-1, 1: -1] = img[-2, :]
+    img_pad[0, 0] = img[0, 0]
+    img_pad[0, -1] = img[0, -1]
+    img_pad[-1, 0] = img[-1, 0]
+    img_pad[-1, -1] = img[-1, -1]
 
+    blend_func = [i / float(blendWidth) for i in range(blendWidth)]
 
+    # range(minX, maxX) iterates through columns
+    for x in range(minY,maxY): # iterate through the rows in bounding box
+        for y in range(minX,maxX): #iterate through the cols in bounding box
 
-            p_dest = np.array([x,y,1]) # 3d array
+            p_dest = np.array([y,x,1], dtype=float) # 3d array of image
             p_source = np.dot(M_inv,p_dest)
+            img_x = p_source[0] / p_source[2]
+            img_y = p_source[1] / p_source[2]
+            rgb_val = np.zeros(3)
 
-            #getting x,y coords. in img_loc as homogenous coords.
-            img_x = p_source[0] / float(p_source[2]) # float
-            img_y = p_source[1] / float(p_source[2]) # float
-            #img _x = x coord of acc
-            #img_y = y coord of acc
+            # A lot of the points are actually in the image, so let's
+            # set a threshold and only use interpolation for those points
+            # that pass it.
+            if abs(np.round(img_x) - img_x) <= 0.05 and abs(np.round(img_y) - img_y) <= 0.05:
+                img_x = int(np.round(img_x))
+                img_y = int(np.round(img_y))
 
-            #make sure tham img_x,img_y are within the bounds of img
-            if (img_x < 0 or img_x >= img_height\
-                or img_y < 0 or img_y >= img_width):
-                continue
-
-            #calculate coords of 4 pixel neighbors
-            xf = int(math.floor(img_x)) #xf = x floor
-            xc = xf + 1 #xc = x ceiling
-            yf = int(math.floor(img_y)) #yf = y floor
-            yc = yf + 1 #yc = y ceiling
-
-            #check that neighbors are within the img bounds.
-            if xc < 0:
-                xc = 0
-            elif xc >= img_height:
-                xc = img_height - 1
-
-            if xf < 0:
-                xf = 0
-            elif xf >= img_height:
-                xf = img_height - 1
-
-            if yc < 0:
-                yc = 0
-            elif yc >= img_width:
-                yc = img_width - 1
-
-            if yf < 0:
-                yf = 0
-            elif yf >= img_width:
-                yf = img_width - 1
-
-            #check that neighbors are not black pixels
-            if np.array_equal(img[xc][yc],np.array([0,0,0])):
-                continue
-            if np.array_equal(img[xc][yf],np.array([0,0,0])):
-                continue
-            if np.array_equal(img[xf][yc],np.array([0,0,0])):
-                continue
-            if np.array_equal(img[xf][yf],np.array([0,0,0])):
-                continue
-
-            Q_11 = img[xf, yf]
-            Q_12 = img[xf, yc]
-            Q_21 = img[xc, yf]
-            Q_22 = img[xc, yc]
-
-            # fQ11 = img[y0,x0]
-            # fQ12 = img[y1,x0]
-            # fQ21 = img[y0,x1]
-            # fQ22 = img[y1,x1]
-
-            #Bilinear interpolation
-            #Do checks to avoid dividing by zero
-            if(xf == xc):
-                fxy1 = Q_11
-                fxy2 = Q_22
+                if not np.array_equal(img[img_y, img_x], np.array([0,0,0])):
+                    rgb_val = img[img_y, img_x]
             else:
-                fxy1 = np.dot((xf-img_x)/(xf-xc),Q_11) + np.dot((img_x-xc)/(xf-xc),Q_21)
-                fxy2 = np.dot((xf-img_x)/(xf-xc),Q_12) + np.dot((img_x-xc)/(xf-xc),Q_22)
+                # Bilinear interpolation
+                xf = int(math.floor(img_x)) # xfloor
+                xc = xf + 1  # xceiling
+                yf = int(math.floor(img_y))  # yfloor
+                yc = yf + 1  # yceiling
 
-            if(yf == yc):
-                fxy = fxy1
+                Q_11 = img_pad[yf + 1, xf + 1]
+                Q_12 = img_pad[yc + 1, xf + 1]
+                Q_21 = img_pad[yf + 1, xc + 1]
+                Q_22 = img_pad[yc + 1, xc + 1]
+
+                # Don't use any points that are black:
+                if np.array_equal(Q_11,np.array([0,0,0])) or np.array_equal(Q_12,np.array([0,0,0]))\
+                   or np.array_equal(Q_21,np.array([0,0,0])) or np.array_equal(Q_22,np.array([0,0,0])):
+                    continue
+
+                val = (1.0 / ((xc - xf) * (yc - yf)))
+                a = np.array([xc - img_x, img_x - xf])
+                c = np.array([[yc - img_y], [img_y - yf]])
+                for q in range(3):
+                    q11, q12, q21, q22 = Q_11[q], Q_12[q], Q_21[q], Q_22[q]
+                    b = np.array([[q11, q12], [q21, q22]])
+                    rgb_val[q] = val * np.dot(a, np.dot(b, c))
+
+            # Blending
+            acc_coord_rgb = acc[x, y, 0:3]
+            if np.array_equal(acc_coord_rgb, np.array([0,0,0])):
+                acc[x, y, 0:3] = rgb_val
+                acc[x, y, 3] = 1
             else:
-                fxy = np.dot((yf-img_y)/(yf-yc),fxy1) + np.dot((img_y-yc)/(yf-yc),fxy2)
-
-            weight = 1.0
-
-            if (img_x < blendWidth):
-                weight = img_x / blendWidth
-            elif(img_x > img_width - blendWidth):
-                weight = (img_width - img_x) / blendWidth
-
-            if (img_y < blendWidth):
-                weight *= (img_y / blendWidth)
-            elif(img_y > img_height - blendWidth):
-                weight *= (img_height - img_y) / blendWidth
-
-            #print img_x,img_y
-            #print img[img_x][img_y][0]
-            #print acc[row][col][0]
-            acc[x][y][0] += float(weight * fxy[0])
-            acc[x][y][1] += float(weight * fxy[1])
-            acc[x][y][2] += float(weight * fxy[2])
-            acc[x][y][3] += float(weight)
-            #print acc[x][y].dtype
+                if maxX - y <= blendWidth:
+                    alpha = 1 - float(blend_func[blendWidth - (maxX - y)])
+                    acc[x, y, 0:3] = (1 - alpha) * acc[x, y, 3] * acc_coord_rgb + alpha * rgb_val
+                    acc[x, y, 3] = alpha + (1 - alpha) * acc[x, y, 3]
+                elif y - minX < blendWidth:
+                    alpha = float(blend_func[y - minX])
+                    acc[x, y, 0:3] = (1 - alpha) * acc[x, y, 3] * acc_coord_rgb + alpha * rgb_val
+                    acc[x, y, 3] = alpha + (1 - alpha) * acc[x, y, 3]
+                else:
+                    acc[x, y, 0:3] = rgb_val
+                    acc[x, y, 3] = 1
     # END TODO
 
 
@@ -196,24 +164,13 @@ def normalizeBlend(acc):
        OUTPUT:
          img: image with r,g,b values of acc normalized
     """
+    img = np.zeros((acc.shape[0], acc.shape[1], 3), dtype=np.uint8)
     for row in range(acc.shape[0]):
         for col in range(acc.shape[1]):
-            arr = acc[row][col]
-            if arr[3] == 0:
-                arr[3] = 255
-                newArr = np.uint8(arr)
+            if acc[row, col, 3] > 0:
+                img[row, col, 0:3] = [int(i) for i in (acc[row, col, 0:3] / acc[row, col, 3]) ]
             else:
-                newArr = np.array([float(arr[0])/arr[3],
-                                float(arr[1])/arr[3],
-                                float(arr[2])/arr[3],
-                                255.0],
-                                dtype = np.uint8
-                                )
-            #newArr.astype(np.int8)
-            #print newArr.dtype
-
-            acc[row][col] = newArr
-    img = acc
+                img[row, col, 0:3] = [int(i) for i in (acc[row, col, 0:3])]
     return img
 
 
@@ -235,18 +192,18 @@ def getAccSize(ipv):
             width = w
 
         # BEGIN TODO 9
-        local_minX,local_minY,local_maxX,local_maxY = imageBoundingBox(img,M)
+        local_minX, local_minY, local_maxX, local_maxY = imageBoundingBox(img,M)
 
-        minX = min(local_minX,minX)
-        minY = min(local_minY,minY)
-        maxX = max(local_maxX,maxX)
-        maxY = max(local_maxY,maxY)
+        minX = min(local_minX, minX)
+        minY = min(local_minY, minY)
+        maxX = max(local_maxX, maxX)
+        maxY = max(local_maxY, maxY)
         # END TODO
 
     # Create an accumulator image
     accWidth = int(math.ceil(maxX) - math.floor(minX))
     accHeight = int(math.ceil(maxY) - math.floor(minY))
-    print 'accWidth, accHeight:', (accWidth, accHeight)
+    # print 'accWidth, accHeight:', (accWidth, accHeight)
     translation = np.array([[1, 0, -minX], [0, 1, -minY], [0, 0, 1]])
 
     return accWidth, accHeight, channels, width, translation
@@ -255,14 +212,12 @@ def getAccSize(ipv):
 def pasteImages(ipv, translation, blendWidth, accWidth, accHeight, channels):
 
     acc = np.zeros((accHeight, accWidth, channels + 1))
-    print "paste"
-    print acc.dtype
     # Add in all the images
     M = np.identity(3)
     for count, i in enumerate(ipv):
         M = i.position
         img = i.img
-
+        # print "on image: ", i
         M_trans = translation.dot(M)
         accumulateBlend(img, acc, M_trans, blendWidth)
 
@@ -318,12 +273,7 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     acc = pasteImages(
         ipv, translation, blendWidth, accWidth, accHeight, channels
     )
-    print "acc"
-    acc = acc.astype(np.uint8)
-    print acc.dtype
     compImage = normalizeBlend(acc)
-    print "compImage"
-    print(compImage.dtype)
 
     # Determine the final image width
     outputWidth = (accWidth - width) if is360 else accWidth
@@ -349,7 +299,5 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     croppedImage = cv2.warpPerspective(
         compImage, A, (outputWidth, accHeight), flags=cv2.INTER_LINEAR
     )
-    print "croppedImage"
-    croppedImage.dtype
 
     return croppedImage
