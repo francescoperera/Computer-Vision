@@ -90,7 +90,7 @@ def accumulateBlend(img, acc, M, blendWidth):
     img_pad[-1, 0] = img[-1, 0]
     img_pad[-1, -1] = img[-1, -1]
 
-    blend_func = [i / float(blendWidth) for i in range(blendWidth)]
+    blend_range = [i / float(blendWidth) for i in range(blendWidth)]
 
     # range(minX, maxX) iterates through columns
     for x in range(minY,maxY): # iterate through the rows in bounding box
@@ -123,7 +123,7 @@ def accumulateBlend(img, acc, M, blendWidth):
                 Q_21 = img_pad[yf + 1, xc + 1]
                 Q_22 = img_pad[yc + 1, xc + 1]
 
-                # Don't use any points that are black:
+                # ignore black points:
                 if np.array_equal(Q_11,np.array([0,0,0])) or np.array_equal(Q_12,np.array([0,0,0]))\
                    or np.array_equal(Q_21,np.array([0,0,0])) or np.array_equal(Q_22,np.array([0,0,0])):
                     continue
@@ -143,11 +143,11 @@ def accumulateBlend(img, acc, M, blendWidth):
                 acc[x, y, 3] = 1
             else:
                 if maxX - y <= blendWidth:
-                    alpha = 1 - float(blend_func[blendWidth - (maxX - y)])
+                    alpha = 1 - float(blend_range[blendWidth - (maxX - y)])
                     acc[x, y, 0:3] = (1 - alpha) * acc[x, y, 3] * acc_coord_rgb + alpha * rgb_val
                     acc[x, y, 3] = alpha + (1 - alpha) * acc[x, y, 3]
                 elif y - minX < blendWidth:
-                    alpha = float(blend_func[y - minX])
+                    alpha = float(blend_range[y - minX])
                     acc[x, y, 0:3] = (1 - alpha) * acc[x, y, 3] * acc_coord_rgb + alpha * rgb_val
                     acc[x, y, 3] = alpha + (1 - alpha) * acc[x, y, 3]
                 else:
@@ -203,7 +203,7 @@ def getAccSize(ipv):
     # Create an accumulator image
     accWidth = int(math.ceil(maxX) - math.floor(minX))
     accHeight = int(math.ceil(maxY) - math.floor(minY))
-    # print 'accWidth, accHeight:', (accWidth, accHeight)
+    print 'accWidth, accHeight:', (accWidth, accHeight)
     translation = np.array([[1, 0, -minX], [0, 1, -minY], [0, 0, 1]])
 
     return accWidth, accHeight, channels, width, translation
@@ -217,7 +217,6 @@ def pasteImages(ipv, translation, blendWidth, accWidth, accHeight, channels):
     for count, i in enumerate(ipv):
         M = i.position
         img = i.img
-        # print "on image: ", i
         M_trans = translation.dot(M)
         accumulateBlend(img, acc, M_trans, blendWidth)
 
