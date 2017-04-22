@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 
 import alignment
-import blend
+import blend2 as blend
 import pyuiutils.uiutils as uiutils
 import warp
 
@@ -266,7 +266,7 @@ class StitchingBaseFrame(AutostitchBaseFrame):
     def computeMapping(self, leftImage, rightImage):
         leftGrey = cv2.cvtColor(leftImage, cv2.COLOR_BGR2GRAY)
         rightGrey = cv2.cvtColor(rightImage, cv2.COLOR_BGR2GRAY)
-        orb = cv2.ORB_create() #TODO:change ORB_create() to ORB()
+        orb = cv2.ORB_create()
         leftKeypoints, leftDescriptors = orb.detectAndCompute(leftGrey, None)
         rightKeypoints, rightDescriptors = orb.detectAndCompute(
             rightGrey, None

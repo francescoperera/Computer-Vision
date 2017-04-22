@@ -102,6 +102,10 @@ def accumulateBlend(img, acc, M, blendWidth):
             img_y = p_source[1] / p_source[2]
             rgb_val = np.zeros(3)
 
+            #if out of bounds, ignore
+            if (img_x < 0 or img_x >= img_height or img_y < 0 \
+                or img_y >=  img_width):
+                continue
             # A lot of the points are actually in the image, so let's
             # set a threshold and only use interpolation for those points
             # that pass it.
